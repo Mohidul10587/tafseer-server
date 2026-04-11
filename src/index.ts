@@ -24,11 +24,16 @@ mongoose.connection.once("open", async () => {
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({
-  origin: [process.env.FRONTEND_URL || "http://localhost:3000"],
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "https://tafseer-client.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true,
+  })
+);
 
 app.get("/health", (_req: Request, res: Response) => res.sendStatus(200));
 
