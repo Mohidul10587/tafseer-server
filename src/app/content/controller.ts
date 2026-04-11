@@ -1,12 +1,12 @@
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "../../types";
-import { Introduction, Surah, Ayah, Quiz, UserProgress } from "./models";
+import { Introduction, Surah, Ayah, Quiz, UserProgress, QuizAttempt } from "./models";
 
 // ─── Introduction ────────────────────────────────────────────────────────────
 
 export const getIntroduction = async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const intro = await Introduction.findOne().sort({ createdAt: -1 });
+    const intro = await Introduction.findOne();
     res.json(intro || null);
   } catch (e) { next(e); }
 };
@@ -80,6 +80,16 @@ export const getAyah = async (req: AuthRequest, res: Response, next: NextFunctio
 export const createAyah = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const ayah = await Ayah.create({ ...req.body, surah_id: req.params.surahId });
+
+    // Resolve pending unlocks for users who earned this ayah before it was uploaded
+    await UserProgress.updateMany(
+      { "pending_next_ayah.surah_id": ayah.surah_id, "pending_next_ayah.ayah_number": ayah.ayah_number },
+      {
+        $push: { unlocked_ayahs: ayah._id },
+        $set: { current_ayah_id: ayah._id, "pending_next_ayah.surah_id": null, "pending_next_ayah.ayah_number": null },
+      }
+    );
+
     res.json(ayah);
   } catch (e) { next(e); }
 };
@@ -151,18 +161,6 @@ export const markIntroRead = async (req: AuthRequest, res: Response, next: NextF
   } catch (e) { next(e); }
 };
 
-export const markSurahIntroRead = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    // Just update last_activity; actual unlock happens after quiz pass
-    await UserProgress.findOneAndUpdate(
-      { user_id: req.user!.userId },
-      { last_activity: new Date() },
-      { upsert: true, new: true }
-    );
-    res.json({ success: true });
-  } catch (e) { next(e); }
-};
-
 export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { quiz_id, answers } = req.body; // answers: number[] (one selected index per question)
@@ -179,7 +177,6 @@ export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunc
     const total = quiz.questions.length;
     const passed = correct === total;
 
-    const { QuizAttempt } = await import("./models");
     await QuizAttempt.create({ user_id: req.user!.userId, quiz_id, answers, score: correct, total, passed });
 
     if (passed) {
@@ -210,7 +207,10 @@ export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunc
           if (nextAyah) {
             if (!progress.unlocked_ayahs.includes(nextAyah._id)) progress.unlocked_ayahs.push(nextAyah._id);
             progress.current_ayah_id = nextAyah._id;
+            progress.pending_next_ayah = { surah_id: null, ayah_number: null };
           } else {
+            // Next ayah not uploaded yet — store pending unlock
+            progress.pending_next_ayah = { surah_id: currentAyah.surah_id, ayah_number: currentAyah.ayah_number + 1 };
             const currentSurah = await Surah.findById(currentAyah.surah_id);
             if (currentSurah) {
               const nextSurah = await Surah.findOne({ serial: currentSurah.serial + 1, isPublished: true });
@@ -224,10 +224,10 @@ export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunc
         }
       }
 
-      const totalAyahs = await Ayah.countDocuments();
-      const totalSurahs = await Surah.countDocuments({ isPublished: true });
-      const totalItems = 1 + totalSurahs + totalAyahs;
-      progress.progress_percentage = Math.round((progress.completed_quizzes.length / totalItems) * 100);
+      const totalQuizzes = await Quiz.countDocuments();
+      progress.progress_percentage = totalQuizzes > 0
+        ? Math.round((progress.completed_quizzes.length / totalQuizzes) * 100)
+        : 0;
       progress.last_activity = new Date();
       await progress.save();
     }

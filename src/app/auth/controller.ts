@@ -58,6 +58,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     if (existing) return res.status(400).json({ error: "Phone number already registered" });
 
     const user = await User.create({ phone, password, name, role: "user" });
+    const token = jwt.sign({ userId: user._id.toString(), role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+    res.cookie("token", token, COOKIE_OPTIONS);
     res.json({ user: { _id: user._id, phone: user.phone, name: user.name, role: user.role } });
   } catch (error) {
     next(error);

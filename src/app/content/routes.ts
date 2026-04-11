@@ -5,7 +5,7 @@ import {
   getSurahs, getSurah, createSurah, updateSurah, deleteSurah,
   getAyahs, getAyah, createAyah, updateAyah, deleteAyah,
   getQuiz, upsertQuiz, deleteQuiz,
-  getMyProgress, markIntroRead, markSurahIntroRead, submitQuiz,
+  getMyProgress, markIntroRead, submitQuiz,
 } from "./controller";
 
 const router = Router();
@@ -21,7 +21,6 @@ router.get("/quiz", verifyUser, getQuiz);
 // Progress
 router.get("/progress", verifyUser, getMyProgress);
 router.post("/progress/intro-read", verifyUser, markIntroRead);
-router.post("/progress/surah-intro-read", verifyUser, markSurahIntroRead);
 router.post("/quiz/submit", verifyUser, submitQuiz);
 
 // Admin content management

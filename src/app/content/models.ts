@@ -62,6 +62,11 @@ const userProgressSchema = new mongoose.Schema({
   completed_quizzes: [{ type: mongoose.Schema.Types.ObjectId }], // quiz IDs
   unlocked_surahs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Surah" }],
   unlocked_ayahs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Ayah" }],
+  // set when user passes an ayah quiz but the next ayah doesn't exist yet
+  pending_next_ayah: {
+    surah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Surah", default: null },
+    ayah_number: { type: Number, default: null },
+  },
   progress_percentage: { type: Number, default: 0 },
   last_activity: { type: Date, default: Date.now },
 }, { timestamps: true });

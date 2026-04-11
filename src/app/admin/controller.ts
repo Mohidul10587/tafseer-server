@@ -1,4 +1,5 @@
 import { Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
 import User from "../user/model";
 import { AuthRequest } from "../../types";
 import { Surah, Ayah, UserProgress, QuizAttempt } from "../content/models";
@@ -61,7 +62,7 @@ export const updateUserPassword = async (req: AuthRequest, res: Response, next: 
     const { password } = req.body;
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    user.password = password;
+    user.password = await bcrypt.hash(password, 12);
     await user.save();
     res.json({ success: true });
   } catch (error) {
