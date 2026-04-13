@@ -29,6 +29,7 @@ app.use(
     origin: [
       process.env.FRONTEND_URL || "http://localhost:3000",
       "https://tafseer-client-rdr7.vercel.app",
+      "https://tafseer-client.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
