@@ -4,18 +4,38 @@ import { Introduction, Surah, Ayah, Quiz, UserProgress, QuizAttempt } from "./mo
 
 // ─── Introduction ────────────────────────────────────────────────────────────
 
-export const getIntroduction = async (_req: AuthRequest, res: Response, next: NextFunction) => {
+export const getIntroductions = async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const intro = await Introduction.findOne();
-    res.json(intro || null);
+    const intros = await Introduction.find().sort({ serial: 1 });
+    res.json(intros);
+  } catch (e) { next(e); }
+};
+
+export const getIntroduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const intro = await Introduction.findById(req.params.id);
+    if (!intro) return res.status(404).json({ error: "Introduction not found" });
+    res.json(intro);
   } catch (e) { next(e); }
 };
 
 export const upsertIntroduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { title_bn, title_en, content_bn, content_en } = req.body;
-    const intro = await Introduction.findOneAndUpdate({}, { title_bn, title_en, content_bn, content_en }, { upsert: true, new: true });
+    const { serial, title_bn, title_en, content_bn, content_en } = req.body;
+    const intro = await Introduction.findOneAndUpdate(
+      { serial },
+      { title_bn, title_en, content_bn, content_en },
+      { upsert: true, new: true }
+    );
     res.json(intro);
+  } catch (e) { next(e); }
+};
+
+export const deleteIntroduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    await Introduction.findByIdAndDelete(req.params.id);
+    await Quiz.deleteMany({ content_type: "global_intro", content_id: req.params.id });
+    res.json({ success: true });
   } catch (e) { next(e); }
 };
 
@@ -187,7 +207,22 @@ export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunc
         progress.completed_quizzes.push(quiz_id);
       }
 
-      if (quiz.content_type === "intro") {
+      if (quiz.content_type === "global_intro") {
+        if (!progress.completed_global_intros.map((id: any) => id.toString()).includes(quiz.content_id.toString())) {
+          progress.completed_global_intros.push(quiz.content_id);
+        }
+        // Check if all global intro parts are done
+        const totalParts = await Introduction.countDocuments();
+        if (progress.completed_global_intros.length >= totalParts) {
+          progress.intro_quiz_passed = true;
+          progress.intro_read = true;
+          const firstSurah = await Surah.findOne({ isPublished: true }).sort({ serial: 1 });
+          if (firstSurah && !progress.unlocked_surahs.map((id: any) => id.toString()).includes(firstSurah._id.toString())) {
+            progress.unlocked_surahs.push(firstSurah._id);
+            progress.current_surah_id = firstSurah._id;
+          }
+        }
+      } else if (quiz.content_type === "intro") {
         progress.intro_quiz_passed = true;
         const firstSurah = await Surah.findOne({ isPublished: true }).sort({ serial: 1 });
         if (firstSurah && !progress.unlocked_surahs.includes(firstSurah._id)) {

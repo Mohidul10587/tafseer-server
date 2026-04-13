@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
-// Introduction (Global)
+// Global Introduction Parts
 const introductionSchema = new mongoose.Schema({
+  serial: { type: Number, required: true, unique: true }, // part number: 1, 2, 3...
   title_bn: { type: String, default: "" },
   title_en: { type: String, default: "" },
   content_bn: { type: String, default: "" },
@@ -46,7 +47,7 @@ const questionSchema = new mongoose.Schema({
 });
 
 const quizSchema = new mongoose.Schema({
-  content_type: { type: String, enum: ["intro", "surah_intro", "ayah"], required: true },
+  content_type: { type: String, enum: ["global_intro", "surah_intro", "ayah"], required: true },
   content_id: { type: mongoose.Schema.Types.ObjectId, required: true },
   questions: [questionSchema],
 }, { timestamps: true });
@@ -55,8 +56,9 @@ quizSchema.index({ content_type: 1, content_id: 1 }, { unique: true });
 // User Progress
 const userProgressSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
-  intro_read: { type: Boolean, default: false },
-  intro_quiz_passed: { type: Boolean, default: false },
+  intro_read: { type: Boolean, default: false },           // kept for legacy, true when all parts read
+  intro_quiz_passed: { type: Boolean, default: false },    // kept for legacy, true when all parts passed
+  completed_global_intros: [{ type: mongoose.Schema.Types.ObjectId, ref: "Introduction" }], // intro part IDs read+quiz passed
   current_surah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Surah", default: null },
   current_ayah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ayah", default: null },
   completed_quizzes: [{ type: mongoose.Schema.Types.ObjectId }], // quiz IDs
