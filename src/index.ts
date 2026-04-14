@@ -21,7 +21,6 @@ mongoose.connection.on("error", console.error.bind(console, "MongoDB error:"));
 mongoose.connection.once("open", async () => {
   console.log("Connected to MongoDB");
   await seedAdmin();
-  await seedIntroduction();
 });
 
 app.use(express.json());
