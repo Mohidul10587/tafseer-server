@@ -1,18 +1,30 @@
 import { Router } from "express";
 import { verifyAdmin, verifyUser } from "../../middleware/auth";
 import {
-  getIntroduction, upsertIntroduction,
-  getSurahs, getSurah, createSurah, updateSurah, deleteSurah,
-  getAyahs, getAyah, createAyah, updateAyah, deleteAyah,
-  getQuiz, upsertQuiz, deleteQuiz,
-  getMyProgress, submitQuiz,
+  getIntroduction,
+  upsertIntroduction,
+  getSurahs,
+  getSurah,
+  createSurah,
+  updateSurah,
+  deleteSurah,
+  getAyahs,
+  getAyah,
+  createAyah,
+  updateAyah,
+  deleteAyah,
+  getQuiz,
+  upsertQuiz,
+  deleteQuiz,
+  getMyProgress,
+  submitQuiz,
 } from "./controller";
 
 const router = Router();
 
 // Public / user content
 router.get("/introduction", verifyUser, getIntroduction);
-router.get("/surahs", verifyUser, getSurahs);
+router.get("/surahs", getSurahs);
 router.get("/surahs/:id", verifyUser, getSurah);
 router.get("/surahs/:surahId/ayahs", verifyUser, getAyahs);
 router.get("/ayahs/:id", verifyUser, getAyah);
