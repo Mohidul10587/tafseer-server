@@ -1,18 +1,17 @@
 import { Router } from "express";
 import { verifyAdmin, verifyUser } from "../../middleware/auth";
 import {
-  getIntroductions, getIntroduction, upsertIntroduction, deleteIntroduction,
+  getIntroduction, upsertIntroduction,
   getSurahs, getSurah, createSurah, updateSurah, deleteSurah,
   getAyahs, getAyah, createAyah, updateAyah, deleteAyah,
   getQuiz, upsertQuiz, deleteQuiz,
-  getMyProgress, markIntroRead, submitQuiz,
+  getMyProgress, submitQuiz,
 } from "./controller";
 
 const router = Router();
 
 // Public / user content
-router.get("/introductions", verifyUser, getIntroductions);
-router.get("/introductions/:id", verifyUser, getIntroduction);
+router.get("/introduction", verifyUser, getIntroduction);
 router.get("/surahs", verifyUser, getSurahs);
 router.get("/surahs/:id", verifyUser, getSurah);
 router.get("/surahs/:surahId/ayahs", verifyUser, getAyahs);
@@ -21,12 +20,10 @@ router.get("/quiz", verifyUser, getQuiz);
 
 // Progress
 router.get("/progress", verifyUser, getMyProgress);
-router.post("/progress/intro-read", verifyUser, markIntroRead);
 router.post("/quiz/submit", verifyUser, submitQuiz);
 
 // Admin content management
 router.post("/admin/introduction", verifyAdmin, upsertIntroduction);
-router.delete("/admin/introduction/:id", verifyAdmin, deleteIntroduction);
 router.post("/admin/surahs", verifyAdmin, createSurah);
 router.put("/admin/surahs/:id", verifyAdmin, updateSurah);
 router.delete("/admin/surahs/:id", verifyAdmin, deleteSurah);

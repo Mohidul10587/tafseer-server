@@ -1,10 +1,7 @@
 import mongoose from "mongoose";
 
-// Global Introduction Parts
+// Global Introduction — single document (singleton)
 const introductionSchema = new mongoose.Schema({
-  serial: { type: Number, required: true, unique: true }, // part number: 1, 2, 3...
-  title_bn: { type: String, default: "" },
-  title_en: { type: String, default: "" },
   content_bn: { type: String, default: "" },
   content_en: { type: String, default: "" },
 }, { timestamps: true });
@@ -56,19 +53,11 @@ quizSchema.index({ content_type: 1, content_id: 1 }, { unique: true });
 // User Progress
 const userProgressSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
-  intro_read: { type: Boolean, default: false },           // kept for legacy, true when all parts read
-  intro_quiz_passed: { type: Boolean, default: false },    // kept for legacy, true when all parts passed
-  completed_global_intros: [{ type: mongoose.Schema.Types.ObjectId, ref: "Introduction" }], // intro part IDs read+quiz passed
   current_surah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Surah", default: null },
   current_ayah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ayah", default: null },
   completed_quizzes: [{ type: mongoose.Schema.Types.ObjectId }], // quiz IDs
   unlocked_surahs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Surah" }],
   unlocked_ayahs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Ayah" }],
-  // set when user passes an ayah quiz but the next ayah doesn't exist yet
-  pending_next_ayah: {
-    surah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Surah", default: null },
-    ayah_number: { type: Number, default: null },
-  },
   progress_percentage: { type: Number, default: 0 },
   last_activity: { type: Date, default: Date.now },
 }, { timestamps: true });

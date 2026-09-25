@@ -5,7 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "./middleware/errorHandler";
 import { seedAdmin } from "./utils/seedAdmin";
-import { seedIntroduction } from "./utils/seedIntroduction";
+import { migrateIntroductionToSingleton } from "./utils/migrateIntroduction";
 import authRoutes from "./app/auth/routes";
 import userRoutes from "./app/user/routes";
 import adminRoutes from "./app/admin/routes";
@@ -21,6 +21,7 @@ mongoose.connection.on("error", console.error.bind(console, "MongoDB error:"));
 mongoose.connection.once("open", async () => {
   console.log("Connected to MongoDB");
   await seedAdmin();
+  await migrateIntroductionToSingleton();
 });
 
 app.use(express.json());

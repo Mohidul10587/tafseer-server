@@ -2,40 +2,26 @@ import { Response, NextFunction } from "express";
 import { AuthRequest } from "../../types";
 import { Introduction, Surah, Ayah, Quiz, UserProgress, QuizAttempt } from "./models";
 
-// ─── Introduction ────────────────────────────────────────────────────────────
+// ─── Introduction (singleton) ─────────────────────────────────────────────────
 
-export const getIntroductions = async (_req: AuthRequest, res: Response, next: NextFunction) => {
+/** GET /content/introduction — return the single introduction document */
+export const getIntroduction = async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const intros = await Introduction.find().sort({ serial: 1 });
-    res.json(intros);
+    const intro = await Introduction.findOne();
+    res.json(intro || null);
   } catch (e) { next(e); }
 };
 
-export const getIntroduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const intro = await Introduction.findById(req.params.id);
-    if (!intro) return res.status(404).json({ error: "Introduction not found" });
-    res.json(intro);
-  } catch (e) { next(e); }
-};
-
+/** POST /content/admin/introduction — create or update the single introduction */
 export const upsertIntroduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { serial, title_bn, title_en, content_bn, content_en } = req.body;
+    const { content_bn, content_en } = req.body;
     const intro = await Introduction.findOneAndUpdate(
-      { serial },
-      { title_bn, title_en, content_bn, content_en },
+      {},
+      { content_bn, content_en },
       { upsert: true, new: true }
     );
     res.json(intro);
-  } catch (e) { next(e); }
-};
-
-export const deleteIntroduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    await Introduction.findByIdAndDelete(req.params.id);
-    await Quiz.deleteMany({ content_type: "global_intro", content_id: req.params.id });
-    res.json({ success: true });
   } catch (e) { next(e); }
 };
 
@@ -100,16 +86,6 @@ export const getAyah = async (req: AuthRequest, res: Response, next: NextFunctio
 export const createAyah = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const ayah = await Ayah.create({ ...req.body, surah_id: req.params.surahId });
-
-    // Resolve pending unlocks for users who earned this ayah before it was uploaded
-    await UserProgress.updateMany(
-      { "pending_next_ayah.surah_id": ayah.surah_id, "pending_next_ayah.ayah_number": ayah.ayah_number },
-      {
-        $push: { unlocked_ayahs: ayah._id },
-        $set: { current_ayah_id: ayah._id, "pending_next_ayah.surah_id": null, "pending_next_ayah.ayah_number": null },
-      }
-    );
-
     res.json(ayah);
   } catch (e) { next(e); }
 };
@@ -166,24 +142,18 @@ export const getMyProgress = async (req: AuthRequest, res: Response, next: NextF
     const progress = await UserProgress.findOne({ user_id: req.user!.userId })
       .populate("current_surah_id")
       .populate("current_ayah_id");
-    res.json(progress || { intro_read: false, intro_quiz_passed: false, unlocked_surahs: [], unlocked_ayahs: [], completed_quizzes: [], progress_percentage: 0 });
-  } catch (e) { next(e); }
-};
-
-export const markIntroRead = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const progress = await UserProgress.findOneAndUpdate(
-      { user_id: req.user!.userId },
-      { intro_read: true, last_activity: new Date() },
-      { upsert: true, new: true }
-    );
-    res.json(progress);
+    res.json(progress || {
+      unlocked_surahs: [],
+      unlocked_ayahs: [],
+      completed_quizzes: [],
+      progress_percentage: 0,
+    });
   } catch (e) { next(e); }
 };
 
 export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { quiz_id, answers } = req.body; // answers: number[] (one selected index per question)
+    const { quiz_id, answers } = req.body;
     const quiz = await Quiz.findById(quiz_id);
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
 
@@ -203,35 +173,13 @@ export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunc
       const progress = await UserProgress.findOne({ user_id: req.user!.userId }) ||
         new UserProgress({ user_id: req.user!.userId });
 
-      if (!progress.completed_quizzes.includes(quiz_id)) {
+      if (!progress.completed_quizzes.map((id: any) => id.toString()).includes(quiz_id.toString())) {
         progress.completed_quizzes.push(quiz_id);
       }
 
-      if (quiz.content_type === "global_intro") {
-        if (!progress.completed_global_intros.map((id: any) => id.toString()).includes(quiz.content_id.toString())) {
-          progress.completed_global_intros.push(quiz.content_id);
-        }
-        // Check if all global intro parts are done
-        const totalParts = await Introduction.countDocuments();
-        if (progress.completed_global_intros.length >= totalParts) {
-          progress.intro_quiz_passed = true;
-          progress.intro_read = true;
-          const firstSurah = await Surah.findOne({ isPublished: true }).sort({ serial: 1 });
-          if (firstSurah && !progress.unlocked_surahs.map((id: any) => id.toString()).includes(firstSurah._id.toString())) {
-            progress.unlocked_surahs.push(firstSurah._id);
-            progress.current_surah_id = firstSurah._id;
-          }
-        }
-      } else if (quiz.content_type === "intro") {
-        progress.intro_quiz_passed = true;
-        const firstSurah = await Surah.findOne({ isPublished: true }).sort({ serial: 1 });
-        if (firstSurah && !progress.unlocked_surahs.includes(firstSurah._id)) {
-          progress.unlocked_surahs.push(firstSurah._id);
-          progress.current_surah_id = firstSurah._id;
-        }
-      } else if (quiz.content_type === "surah_intro") {
+      if (quiz.content_type === "surah_intro") {
         const firstAyah = await Ayah.findOne({ surah_id: quiz.content_id }).sort({ ayah_number: 1 });
-        if (firstAyah && !progress.unlocked_ayahs.includes(firstAyah._id)) {
+        if (firstAyah && !progress.unlocked_ayahs.map((id: any) => id.toString()).includes(firstAyah._id.toString())) {
           progress.unlocked_ayahs.push(firstAyah._id);
           progress.current_ayah_id = firstAyah._id;
         }
@@ -240,16 +188,15 @@ export const submitQuiz = async (req: AuthRequest, res: Response, next: NextFunc
         if (currentAyah) {
           const nextAyah = await Ayah.findOne({ surah_id: currentAyah.surah_id, ayah_number: currentAyah.ayah_number + 1 });
           if (nextAyah) {
-            if (!progress.unlocked_ayahs.includes(nextAyah._id)) progress.unlocked_ayahs.push(nextAyah._id);
+            if (!progress.unlocked_ayahs.map((id: any) => id.toString()).includes(nextAyah._id.toString())) {
+              progress.unlocked_ayahs.push(nextAyah._id);
+            }
             progress.current_ayah_id = nextAyah._id;
-            progress.pending_next_ayah = { surah_id: null, ayah_number: null };
           } else {
-            // Next ayah not uploaded yet — store pending unlock
-            progress.pending_next_ayah = { surah_id: currentAyah.surah_id, ayah_number: currentAyah.ayah_number + 1 };
             const currentSurah = await Surah.findById(currentAyah.surah_id);
             if (currentSurah) {
               const nextSurah = await Surah.findOne({ serial: currentSurah.serial + 1, isPublished: true });
-              if (nextSurah && !progress.unlocked_surahs.includes(nextSurah._id)) {
+              if (nextSurah && !progress.unlocked_surahs.map((id: any) => id.toString()).includes(nextSurah._id.toString())) {
                 progress.unlocked_surahs.push(nextSurah._id);
                 progress.current_surah_id = nextSurah._id;
                 progress.current_ayah_id = null;
