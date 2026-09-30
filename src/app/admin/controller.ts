@@ -2,7 +2,7 @@ import { Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import User from "../user/model";
 import { AuthRequest } from "../../types";
-import { Surah, Ayah, UserProgress, QuizAttempt } from "../content/models";
+import { Surah, Ayah } from "../content/models";
 
 export const getAdminDashboard = async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -20,13 +20,7 @@ export const getAdminDashboard = async (_req: AuthRequest, res: Response, next: 
 export const getAdminUsers = async (_req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await User.find({ role: "user" }).select("-password").sort({ createdAt: -1 });
-    const progresses = await UserProgress.find({ user_id: { $in: users.map(u => u._id) } });
-    const progressMap = Object.fromEntries(progresses.map(p => [p.user_id.toString(), p]));
-    const result = users.map(u => ({
-      ...u.toObject(),
-      progress: progressMap[u._id.toString()] || null,
-    }));
-    res.json(result);
+    res.json(users);
   } catch (error) {
     next(error);
   }

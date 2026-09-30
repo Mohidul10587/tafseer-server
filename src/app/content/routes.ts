@@ -13,11 +13,6 @@ import {
   createAyah,
   updateAyah,
   deleteAyah,
-  getQuiz,
-  upsertQuiz,
-  deleteQuiz,
-  getMyProgress,
-  submitQuiz,
 } from "./controller";
 
 const router = Router();
@@ -25,15 +20,9 @@ const router = Router();
 // Public / user content
 router.get("/introduction", verifyUser, getIntroduction);
 router.get("/surahs", getSurahs);
-router.get("/surahs/:id", verifyUser, getSurah);
-router.get("/surahs/:surahId/ayahs", verifyUser, getAyahs);
-router.get("/ayahs/:id", verifyUser, getAyah);
-router.get("/quiz", verifyUser, getQuiz);
-
-// Progress
-router.get("/progress", verifyUser, getMyProgress);
-router.post("/quiz/submit", verifyUser, submitQuiz);
-
+router.get("/surahs/:id", getSurah);
+router.get("/surahs/:surahId/ayahs", getAyahs);
+router.get("/ayahs/:id", getAyah);
 // Admin content management
 router.post("/admin/introduction", verifyAdmin, upsertIntroduction);
 router.post("/admin/surahs", verifyAdmin, createSurah);
@@ -42,7 +31,5 @@ router.delete("/admin/surahs/:id", verifyAdmin, deleteSurah);
 router.post("/admin/surahs/:surahId/ayahs", verifyAdmin, createAyah);
 router.put("/admin/ayahs/:id", verifyAdmin, updateAyah);
 router.delete("/admin/ayahs/:id", verifyAdmin, deleteAyah);
-router.post("/admin/quiz", verifyAdmin, upsertQuiz);
-router.delete("/admin/quiz/:id", verifyAdmin, deleteQuiz);
 
 export default router;

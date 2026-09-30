@@ -29,49 +29,6 @@ const ayahSchema = new mongoose.Schema({
 }, { timestamps: true });
 ayahSchema.index({ surah_id: 1, ayah_number: 1 }, { unique: true });
 
-// Quiz
-
-const questionSchema = new mongoose.Schema({
-  question_text_bn: { type: String, default: "" },
-  question_text_en: { type: String, default: "" },
-  options: [new mongoose.Schema({
-    text_bn: { type: String, default: "" },
-    text_en: { type: String, default: "" },
-  })],
-  correct_answer: { type: Number, required: true, default: 0 }, // index of correct option
-  explanation_bn: { type: String, default: "" },
-  explanation_en: { type: String, default: "" },
-});
-
-const quizSchema = new mongoose.Schema({
-  content_type: { type: String, enum: ["global_intro", "surah_intro", "ayah"], required: true },
-  content_id: { type: mongoose.Schema.Types.ObjectId, required: true },
-  questions: [questionSchema],
-}, { timestamps: true });
-quizSchema.index({ content_type: 1, content_id: 1 }, { unique: true });
-
-// User Progress
-const userProgressSchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
-  current_surah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Surah", default: null },
-  current_ayah_id: { type: mongoose.Schema.Types.ObjectId, ref: "Ayah", default: null },
-  completed_quizzes: [{ type: mongoose.Schema.Types.ObjectId }], // quiz IDs
-  unlocked_surahs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Surah" }],
-  unlocked_ayahs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Ayah" }],
-  progress_percentage: { type: Number, default: 0 },
-  last_activity: { type: Date, default: Date.now },
-}, { timestamps: true });
-
-// Quiz Attempts
-const quizAttemptSchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  quiz_id: { type: mongoose.Schema.Types.ObjectId, ref: "Quiz", required: true },
-  answers: [{ type: Number }], // selected option index per question
-  score: { type: Number, required: true },
-  total: { type: Number, required: true },
-  passed: { type: Boolean, required: true },
-}, { timestamps: true });
-
 // Feedback
 const feedbackSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -81,7 +38,4 @@ const feedbackSchema = new mongoose.Schema({
 export const Introduction = mongoose.models.Introduction || mongoose.model("Introduction", introductionSchema);
 export const Surah = mongoose.models.Surah || mongoose.model("Surah", surahSchema);
 export const Ayah = mongoose.models.Ayah || mongoose.model("Ayah", ayahSchema);
-export const Quiz = mongoose.models.Quiz || mongoose.model("Quiz", quizSchema);
-export const UserProgress = mongoose.models.UserProgress || mongoose.model("UserProgress", userProgressSchema);
-export const QuizAttempt = mongoose.models.QuizAttempt || mongoose.model("QuizAttempt", quizAttemptSchema);
 export const Feedback = mongoose.models.Feedback || mongoose.model("Feedback", feedbackSchema);
